@@ -25,6 +25,7 @@ function Search-AzureRoleAssignmentByUPN {
     param (
         [Parameter(Mandatory = $true)]
         [string]$UPN,
+        [Parameter(Mandatory = $true)]
         [string]$TenantId
     )
 
@@ -35,9 +36,17 @@ function Search-AzureRoleAssignmentByUPN {
     foreach ($subscription in $subscriptions) {
         Write-Progress -Activity "Processing subscriptions" -Status "Subscription: $($subscription.Name)" -PercentComplete (($subscriptions.IndexOf($subscription) + 1) / $subscriptions.Count * 100)
 
-        Set-AzContext -SubscriptionId $subscription.Id -ErrorAction SilentlyContinue
+        $timer = Measure-Command {
+            $context = Set-AzContext -SubscriptionId $subscription.Id -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+        }
+        $executionTime = $timer.TotalMilliseconds
+        $executionTimes += $executionTime
 
-        $roleAssignments = Get-AzRoleAssignment -SignInName $UPN -ErrorAction SilentlyContinue
+        $assignmentTimer = measure-command {
+            $roleAssignments = Get-AzRoleAssignment -SignInName $UPN -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+        }
+        $assignmentExecutionTime = $assignmentTimer.TotalMilliseconds
+        $assignmentExecutionTimes += $assignmentExecutionTime
 
         if ($roleAssignments) {
             foreach ($roleAssignment in $roleAssignments) {
@@ -51,11 +60,15 @@ function Search-AzureRoleAssignmentByUPN {
             }
         }
     }
+    # Write-Host $assignmentExecutionTimes | Measure-Object -Average
+    # Write-Host $executionTimes | Measure-Object -Average
 
     if ($results) {
         return $results | Format-Table
+
     }
     else {
-        return "User role assignment not found"
+        return "User role assignment not found" 
     }
+
 }
