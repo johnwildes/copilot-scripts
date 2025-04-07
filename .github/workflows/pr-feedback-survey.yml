@@ -1,0 +1,24 @@
+name: PR Feedback Survey
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  add-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add feedback survey comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prUser = context.payload.pull_request.user.login;
+            const issueNumber = context.payload.pull_request.number;
+            const commentBody = `@${prUser}, thank you for your pull request! We value your feedback. Please take a moment to complete our survey: [Feedback Survey](https://mysurvey.com/feedback)`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: commentBody,
+            });
